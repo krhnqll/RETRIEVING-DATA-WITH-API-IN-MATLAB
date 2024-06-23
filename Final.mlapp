@@ -1,0 +1,181 @@
+classdef Final < matlab.apps.AppBase
+
+    % Properties that correspond to app components
+    properties (Access = public)
+        UIFigure                 matlab.ui.Figure
+        WindSpeedLabel           matlab.ui.control.Label
+        HumidityLabel            matlab.ui.control.Label
+        tempLabel                matlab.ui.control.Label
+        GetInformationButton     matlab.ui.control.Button
+        EditField                matlab.ui.control.EditField
+        AddCityButton            matlab.ui.control.Button
+        SelectCityDropDown       matlab.ui.control.DropDown
+        SelectCityDropDownLabel  matlab.ui.control.Label
+        WindSpeedAxes            matlab.ui.control.UIAxes
+        HumidityAxes             matlab.ui.control.UIAxes
+        TemperatureAxes          matlab.ui.control.UIAxes
+    end
+
+    % Callbacks that handle component events
+    methods (Access = private)
+
+        % Button pushed function: GetInformationButton
+        function GetInformationButtonPushed(app, event)
+          %Seçilen şehri string olarak alma ve 
+          %FetchFiveDayForecast fonksiyonunu çağırma satırları /28 /29
+          city = app.SelectCityDropDown.Value;  
+          [temp,humidity,windSpeed,time] = fetchFiveDayForecast(city);
+          
+          %Sıcaklık grafiğinin alınan verilere göre çizildiği kısım.
+          plot(app.TemperatureAxes, time, temp, '-o');
+          %Seçilen şehri grafik üzerine formatlı şekilde yazdırdığımız kısım.
+          title(app.TemperatureAxes, sprintf('Temperature (°C) Forecast for %s',city));  
+          xlabel(app.TemperatureAxes, 'Date'); 
+          ylabel(app.TemperatureAxes, 'Temperature (°C)'); 
+
+          %Nem grafiğinin alınan verilere göre çizildiği kısım.
+          plot(app.HumidityAxes, time, humidity, '-x');
+          %Seçilen şehri grafik üzerine formatlı şekilde yazdırdığımız kısım.
+          title(app.HumidityAxes, sprintf('Humidity Forecast for %s', city));  
+          xlabel(app.HumidityAxes, 'Date'); 
+          ylabel(app.HumidityAxes, 'Humidity (%)'); 
+
+          %Rüzgar hızı grafiğinin alınan verilere göre çizildiği kısım.
+          plot(app.WindSpeedAxes, time, windSpeed, '-*');
+          %Seçilen şehri grafik üzerine formatlı şekilde yazdırdığımız kısım.
+          title(app.WindSpeedAxes, sprintf('Wind Speed Forecast for %s ', city));  
+          xlabel(app.WindSpeedAxes, 'Date'); 
+          ylabel(app.WindSpeedAxes, 'Wind Speed (m/s)'); 
+          
+          %Anlık sıcaklık değerini yazdırdığımız kısım.Formatlı kullanım.
+          app.tempLabel.Text = sprintf('Temperature: %.1f °C', temp(1));   
+
+          %Anlık nem değerini yazdırdığımız kısım.Formatlı kullanım.
+          app.HumidityLabel.Text = sprintf('Humidity: %.1f%%', humidity(1));
+
+          %Anlık Rüzgar Hızını yazdırdığımız kısım.Formatlı kullanım.
+          app.WindSpeedLabel.Text = sprintf('Wind Speed: %.2f m/s', windSpeed(1));    
+
+        end
+
+        % Button pushed function: AddCityButton
+        function AddCityButtonPushed(app, event)
+
+            AddnewCity = app.EditField.Value; %Figür üzerinde bulunan app.EditField kısmında yazdığımız değeri alıp string olarak dönüştürmemize yarar.
+    
+            if ~isempty(AddnewCity) % Dönüştürdüğümüz string'in boş mu olduğunu kontrol eder.
+           
+            app.SelectCityDropDown.Items{end+1} = AddnewCity; %Gerekli şartlar sağlanıyorsa app.SelectCityDropDown içerisinde son sıraya ekleme yapar.
+
+            end
+        end
+    end
+
+    % Component initialization
+    methods (Access = private)
+
+        % Create UIFigure and components
+        function createComponents(app)
+
+            % Create UIFigure and hide until all components are created
+            app.UIFigure = uifigure('Visible', 'off');
+            app.UIFigure.Position = [100 100 1002 501];
+            app.UIFigure.Name = 'MATLAB App';
+
+            % Create TemperatureAxes
+            app.TemperatureAxes = uiaxes(app.UIFigure);
+            title(app.TemperatureAxes, 'Temperature Forecast For')
+            xlabel(app.TemperatureAxes, 'Date')
+            ylabel(app.TemperatureAxes, 'Temperature')
+            zlabel(app.TemperatureAxes, 'Z')
+            app.TemperatureAxes.Position = [19 300 300 185];
+
+            % Create HumidityAxes
+            app.HumidityAxes = uiaxes(app.UIFigure);
+            title(app.HumidityAxes, 'Humidity Forecast For')
+            xlabel(app.HumidityAxes, 'Date')
+            ylabel(app.HumidityAxes, 'Humidity')
+            zlabel(app.HumidityAxes, 'Z')
+            app.HumidityAxes.Position = [341 300 300 185];
+
+            % Create WindSpeedAxes
+            app.WindSpeedAxes = uiaxes(app.UIFigure);
+            title(app.WindSpeedAxes, 'Wind Speed Forecast For')
+            xlabel(app.WindSpeedAxes, 'Date')
+            ylabel(app.WindSpeedAxes, 'Wind Speed')
+            zlabel(app.WindSpeedAxes, 'Z')
+            app.WindSpeedAxes.Position = [663 300 300 185];
+
+            % Create SelectCityDropDownLabel
+            app.SelectCityDropDownLabel = uilabel(app.UIFigure);
+            app.SelectCityDropDownLabel.HorizontalAlignment = 'right';
+            app.SelectCityDropDownLabel.Position = [666 210 62 22];
+            app.SelectCityDropDownLabel.Text = 'Select City';
+
+            % Create SelectCityDropDown
+            app.SelectCityDropDown = uidropdown(app.UIFigure);
+            app.SelectCityDropDown.Items = {};
+            app.SelectCityDropDown.Position = [743 210 100 22];
+            app.SelectCityDropDown.Value = {};
+
+            % Create AddCityButton
+            app.AddCityButton = uibutton(app.UIFigure, 'push');
+            app.AddCityButton.ButtonPushedFcn = createCallbackFcn(app, @AddCityButtonPushed, true);
+            app.AddCityButton.Position = [219 209 100 23];
+            app.AddCityButton.Text = 'Add City';
+
+            % Create EditField
+            app.EditField = uieditfield(app.UIFigure, 'text');
+            app.EditField.Position = [105 210 100 22];
+
+            % Create GetInformationButton
+            app.GetInformationButton = uibutton(app.UIFigure, 'push');
+            app.GetInformationButton.ButtonPushedFcn = createCallbackFcn(app, @GetInformationButtonPushed, true);
+            app.GetInformationButton.Position = [452 44 100 23];
+            app.GetInformationButton.Text = 'Get Information';
+
+            % Create tempLabel
+            app.tempLabel = uilabel(app.UIFigure);
+            app.tempLabel.Position = [160 122 138 22];
+            app.tempLabel.Text = 'Temperature:';
+
+            % Create HumidityLabel
+            app.HumidityLabel = uilabel(app.UIFigure);
+            app.HumidityLabel.Position = [452 122 101 22];
+            app.HumidityLabel.Text = 'Humidity:';
+
+            % Create WindSpeedLabel
+            app.WindSpeedLabel = uilabel(app.UIFigure);
+            app.WindSpeedLabel.Position = [772 122 125 22];
+            app.WindSpeedLabel.Text = 'Wind Speed:';
+
+            % Show the figure after all components are created
+            app.UIFigure.Visible = 'on';
+        end
+    end
+
+    % App creation and deletion
+    methods (Access = public)
+
+        % Construct app
+        function app = Final
+
+            % Create UIFigure and components
+            createComponents(app)
+
+            % Register the app with App Designer
+            registerApp(app, app.UIFigure)
+
+            if nargout == 0
+                clear app
+            end
+        end
+
+        % Code that executes before app deletion
+        function delete(app)
+
+            % Delete UIFigure when app is deleted
+            delete(app.UIFigure)
+        end
+    end
+end
